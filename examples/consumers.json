@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "license": "MIT",
+  "consumers": [
+    {
+      "id": "checkout-web",
+      "name": "Checkout Web",
+      "criticality": "critical",
+      "owner": "commerce-platform",
+      "repository_path": "services/checkout-web",
+      "tags": ["customer-facing", "payments"]
+    },
+    {
+      "id": "ops-reporter",
+      "name": "Operations Reporter",
+      "criticality": "medium",
+      "owner": "data-platform",
+      "repository_path": "services/ops-reporter",
+      "tags": ["internal", "reporting"]
+    }
+  ],
+  "dependencies": [
+    {
+      "consumer_id": "checkout-web",
+      "target_id": "fixture-api",
+      "method": "GET",
+      "path": "/v1/orders",
+      "evidence": "Synthetic call site: services/checkout-web/orders-client.py"
+    },
+    {
+      "consumer_id": "checkout-web",
+      "target_id": "partner-catalog",
+      "method": "GET",
+      "path": "/v1/products",
+      "evidence": "Synthetic call site: services/checkout-web/catalog-client.py"
+    },
+    {
+      "consumer_id": "ops-reporter",
+      "target_id": "fixture-api",
+      "method": "GET",
+      "path": "/v1/search",
+      "evidence": "Synthetic call site: services/ops-reporter/search-client.py"
+    }
+  ]
+}

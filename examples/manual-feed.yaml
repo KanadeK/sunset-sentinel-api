@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: MIT
+# Synthetic offline example; it contains no third-party API data.
+schema_version: 1
+license: MIT
+signals:
+  - signal_key: manual:partner-catalog-v1
+    target_id: partner-catalog
+    scope: service
+    deprecation_at: "2026-10-01T00:00:00Z"
+    sunset_at: "2027-01-31T23:59:59Z"
+    documentation_url: "https://docs.example.test/catalog-v2-migration"
+    replacement: "partner-catalog-v2"
