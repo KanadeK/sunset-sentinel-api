@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import ipaddress
+import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -32,6 +33,7 @@ _CONDITIONAL_HEADERS = frozenset({"if-none-match", "if-modified-since"})
 _FORBIDDEN_REQUEST_OVERRIDES = frozenset(
     {"host", "connection", "proxy-authorization", "proxy-authenticate"}
 )
+_LINK_TARGET_RE = re.compile(r"<([^<>]*)>")
 
 
 class Clock(Protocol):
@@ -646,10 +648,38 @@ def redact_query_values(url: str) -> str:
 
 def _retained_headers(headers: httpx.Headers) -> HeaderTuple:
     return tuple(
-        (name.casefold(), value)
+        (
+            name.casefold(),
+            _redact_link_header(value) if name.casefold() == "link" else value,
+        )
         for name, value in headers.multi_items()
         if name.casefold() in _RETAINED_RESPONSE_HEADERS
     )
+
+
+def _redact_link_header(value: str) -> str:
+    def replace_target(match: re.Match[str]) -> str:
+        target = match.group(1)
+        parsed = urlsplit(target)
+        if parsed.hostname is not None:
+            return f"<{redact_query_values(target)}>"
+        redacted_query = ""
+        if parsed.query:
+            redacted_query = "&".join(
+                f"{component.partition('=')[0]}=REDACTED" for component in parsed.query.split("&")
+            )
+        safe_relative = urlunsplit(
+            SplitResult(
+                scheme="",
+                netloc="",
+                path=parsed.path,
+                query=redacted_query,
+                fragment="",
+            )
+        )
+        return f"<{safe_relative}>"
+
+    return _LINK_TARGET_RE.sub(replace_target, value)
 
 
 def _last_header(headers: HeaderTuple, name: str) -> str | None:

@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="Local API lifecycle monitoring and migration planning."
+    >
+    <title>Sunset Sentinel</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to dashboard</a>
+
+    <header class="app-header">
+      <a class="brand" href="/" aria-label="Sunset Sentinel dashboard">
+        <span class="brand-mark" aria-hidden="true">SS</span>
+        <span>
+          <strong>Sunset Sentinel</strong>
+          <small>API lifecycle monitor</small>
+        </span>
+      </a>
+      <div class="header-actions">
+        <p class="system-status" id="system-status">
+          <span class="status-indicator" aria-hidden="true"></span>
+          <span id="system-status-text">Connecting</span>
+        </p>
+        <button class="button button-secondary" id="refresh-button" type="button">
+          Refresh
+        </button>
+        <button class="button button-primary" id="import-button" type="button">
+          Import sample
+        </button>
+      </div>
+    </header>
+
+    <main id="main-content" tabindex="-1">
+      <section class="intro" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">Local lifecycle intelligence</p>
+          <h1 id="page-title">Know what breaks next.</h1>
+          <p class="intro-copy">
+            Track retirement signals, affected systems, and migration urgency in one
+            private workspace.
+          </p>
+        </div>
+        <nav class="export-nav" aria-label="Download reports">
+          <span>Export</span>
+          <a href="/api/export/json" download>JSON</a>
+          <a href="/api/export/markdown" download>Report</a>
+          <a href="/api/export/calendar" download>Calendar</a>
+          <a href="/api/export/checklist" download>Checklist</a>
+          <a href="/api/export/issues" download>Issues</a>
+        </nav>
+      </section>
+
+      <section class="metrics" aria-label="Lifecycle summary">
+        <article>
+          <span>Total records</span>
+          <strong id="metric-total">0</strong>
+        </article>
+        <article>
+          <span>High priority</span>
+          <strong id="metric-priority">0</strong>
+        </article>
+        <article>
+          <span>Within 90 days</span>
+          <strong id="metric-soon">0</strong>
+        </article>
+        <article>
+          <span>Consumers</span>
+          <strong id="metric-consumers">0</strong>
+        </article>
+      </section>
+
+      <div class="workspace">
+        <section class="records-panel" aria-labelledby="records-title">
+          <div class="section-heading">
+            <div>
+              <h2 id="records-title">Lifecycle records</h2>
+              <p id="record-count">Waiting for local data</p>
+            </div>
+            <form class="record-filters" id="record-filters" role="search">
+              <div class="field">
+                <label for="record-search">Search</label>
+                <input
+                  id="record-search"
+                  name="search"
+                  type="search"
+                  placeholder="Target, endpoint, consumer"
+                  autocomplete="off"
+                >
+              </div>
+              <div class="field">
+                <label for="state-filter">State</label>
+                <select id="state-filter" name="state">
+                  <option value="">All states</option>
+                  <option value="conflicted">Conflicted</option>
+                  <option value="sunset_overdue">Sunset overdue</option>
+                  <option value="sunset_scheduled">Sunset scheduled</option>
+                  <option value="deprecation_scheduled">Deprecation scheduled</option>
+                  <option value="deprecated">Deprecated</option>
+                  <option value="deprecated_date_unknown">Date unknown</option>
+                  <option value="withdrawn">Withdrawn</option>
+                  <option value="active">Active</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="sort-records">Order</label>
+                <select id="sort-records" name="sort">
+                  <option value="priority">Priority</option>
+                  <option value="sunset">Sunset date</option>
+                  <option value="target">Target</option>
+                </select>
+              </div>
+            </form>
+          </div>
+
+          <div
+            class="data-state"
+            id="records-state"
+            role="status"
+            aria-live="polite"
+          ></div>
+          <div class="table-wrap">
+            <table>
+              <caption class="sr-only">
+                Assessed API lifecycle records
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Target</th>
+                  <th scope="col">State</th>
+                  <th scope="col">Deprecation</th>
+                  <th scope="col">Sunset</th>
+                  <th scope="col">Consumers</th>
+                  <th scope="col">Priority</th>
+                  <th scope="col">Context</th>
+                </tr>
+              </thead>
+              <tbody id="records-body" aria-busy="true">
+                <tr class="loading-row">
+                  <td><span class="skeleton skeleton-wide"></span></td>
+                  <td><span class="skeleton"></span></td>
+                  <td><span class="skeleton"></span></td>
+                  <td><span class="skeleton"></span></td>
+                  <td><span class="skeleton"></span></td>
+                  <td><span class="skeleton skeleton-short"></span></td>
+                  <td><span class="skeleton skeleton-short"></span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <aside class="changes-panel" aria-labelledby="changes-title">
+          <div class="section-heading compact">
+            <div>
+              <h2 id="changes-title">Recent changes</h2>
+              <p id="change-count">No changes loaded</p>
+            </div>
+          </div>
+          <div
+            class="data-state"
+            id="changes-state"
+            role="status"
+            aria-live="polite"
+          ></div>
+          <ol class="change-list" id="change-list" aria-busy="true"></ol>
+        </aside>
+      </div>
+
+      <noscript>
+        <p class="noscript-message">
+          JavaScript is required to load local lifecycle data. API exports remain
+          available from the links above.
+        </p>
+      </noscript>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  </body>
+</html>

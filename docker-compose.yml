@@ -1,0 +1,26 @@
+services:
+  sunset-sentinel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: sunset-sentinel-api:0.1.0
+    init: true
+    restart: unless-stopped
+    environment:
+      SUNSET_SENTINEL_DATABASE: /data/sunset-sentinel.db
+      SUNSET_SENTINEL_SAMPLE_DIR: /app/examples
+      SUNSET_SENTINEL_PORT: "8000"
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - sunset-sentinel-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid,nodev
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  sunset-sentinel-data:

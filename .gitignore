@@ -1,5 +1,6 @@
 .venv/
 .pytest-tmp/
+.pytest-tmp*/
 .ruff_cache/
 .mypy_cache/
 .coverage
