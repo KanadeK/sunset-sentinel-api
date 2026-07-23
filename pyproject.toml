@@ -1,0 +1,123 @@
+[build-system]
+requires = ["hatchling==1.31.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sunset-sentinel-api"
+version = "0.1.0"
+description = "Monitor third-party API deprecation signals and turn them into migration-ready impact reports."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = "MIT"
+authors = [{ name = "KanadeK" }]
+keywords = ["api", "deprecation", "sunset", "monitoring", "openapi"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Framework :: FastAPI",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Internet :: WWW/HTTP",
+  "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = [
+  "APScheduler==3.11.2",
+  "fastapi==0.139.2",
+  "httpx==0.28.1",
+  "pydantic==2.13.4",
+  "PyYAML==6.0.3",
+  "uvicorn==0.51.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "build==1.5.0",
+  "hatchling==1.31.0",
+  "mypy==2.3.0",
+  "pip-audit==2.10.1",
+  "pytest==9.1.1",
+  "pytest-cov==7.1.0",
+  "respx==0.22.0",
+  "ruff==0.15.22",
+]
+
+[project.scripts]
+sunset-sentinel = "sunset_sentinel_api.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/KanadeK/sunset-sentinel-api"
+Documentation = "https://github.com/KanadeK/sunset-sentinel-api#readme"
+Issues = "https://github.com/KanadeK/sunset-sentinel-api/issues"
+Source = "https://github.com/KanadeK/sunset-sentinel-api"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sunset_sentinel_api"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src",
+  "/tests",
+  "/examples",
+  "/docs",
+  "/scripts",
+  "/README.md",
+  "/README.zh-CN.md",
+  "/LICENSE",
+  "/CHANGELOG.md",
+  "/CONTRIBUTING.md",
+  "/SECURITY.md",
+  "/CODE_OF_CONDUCT.md",
+  "/Makefile",
+  "/docker-compose.yml",
+]
+
+[tool.pytest.ini_options]
+minversion = "9.0"
+addopts = "-ra --strict-config --strict-markers --basetemp=.pytest-tmp"
+testpaths = ["tests"]
+markers = [
+  "integration: exercises adapters and persistent storage",
+  "e2e: exercises a complete user-facing workflow",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["src/sunset_sentinel_api"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+skip_covered = true
+exclude_also = [
+  "if TYPE_CHECKING:",
+  "if __name__ == .__main__.:",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF", "S"]
+ignore = ["S101"]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = ["S603"]
+"tests/*" = ["S105", "S106", "S108"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+pretty = true
+packages = ["sunset_sentinel_api"]
+
+[[tool.mypy.overrides]]
+module = ["apscheduler.*", "yaml"]
+ignore_missing_imports = true
