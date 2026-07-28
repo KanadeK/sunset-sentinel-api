@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="A read-only synthetic Sunset Sentinel assessment with migration-ready API lifecycle evidence."
+    >
+    <title>Sunset Sentinel API | Synthetic lifecycle assessment</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to assessment</a>
+
+    <header class="topbar">
+      <div class="shell topbar__inner">
+        <a class="brand" href="./" aria-label="Sunset Sentinel API home">
+          <span class="brand__mark" aria-hidden="true">SS</span>
+          <span>Sunset Sentinel API</span>
+        </a>
+        <nav aria-label="Project links">
+          <a href="#artifacts">Artifacts</a>
+          <a href="https://github.com/KanadeK/sunset-sentinel-api">Source</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main-content">
+      <section class="hero">
+        <div class="shell hero__grid">
+          <div class="hero__copy">
+            <p class="eyebrow">Deprecation intelligence / synthetic data</p>
+            <h1>See API sunsets before they become incidents.</h1>
+            <p class="hero__lead">
+              A reproducible assessment turns deprecation signals into ranked migration work,
+              calendars, issue drafts, and owner-ready checklists.
+            </p>
+            <div class="hero__actions">
+              <a class="primary-link" href="demo/assessment.json">Inspect assessment JSON</a>
+              <a class="secondary-link" href="#risk-register">Review risk register</a>
+            </div>
+            <p class="provenance">
+              Fixed scenario time: <time datetime="2026-07-23T00:00:00Z">23 Jul 2026</time>.
+              Generated offline from bundled fixtures.
+            </p>
+          </div>
+
+          <aside class="evidence" aria-labelledby="evidence-title">
+            <div class="evidence__heading">
+              <p class="eyebrow" id="evidence-title">Evidence snapshot</p>
+              <span class="status-dot" aria-hidden="true"></span>
+            </div>
+            <dl class="metrics">
+              <div>
+                <dt>Lifecycle records</dt>
+                <dd data-record-count>3</dd>
+              </div>
+              <div>
+                <dt>Highest priority</dt>
+                <dd data-highest-priority>75</dd>
+              </div>
+              <div>
+                <dt>Network requests</dt>
+                <dd>0</dd>
+              </div>
+              <div>
+                <dt>Output formats</dt>
+                <dd>5</dd>
+              </div>
+            </dl>
+            <p class="load-state" data-load-state role="status" aria-live="polite">
+              Loading committed assessment data.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <section class="status-strip" aria-label="Dataset status">
+        <div class="shell status-strip__inner">
+          <span><strong>SYNTHETIC</strong> safe for public review</span>
+          <span>RFC-aware lifecycle signals</span>
+          <span>Deterministic at every build</span>
+        </div>
+      </section>
+
+      <section class="section shell" id="risk-register" aria-labelledby="risk-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Migration queue</p>
+            <h2 id="risk-title">Risk register</h2>
+          </div>
+          <p>
+            Ranked by urgency and consumer blast radius. Scores come directly from the committed
+            assessment.
+          </p>
+        </div>
+
+        <div class="table-frame" tabindex="0" aria-label="Scrollable API lifecycle risk table">
+          <table>
+            <caption class="visually-hidden">
+              Synthetic API lifecycle records ordered by migration priority
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Target</th>
+                <th scope="col">State</th>
+                <th scope="col">Sunset</th>
+                <th scope="col">Consumers</th>
+                <th scope="col">Priority</th>
+              </tr>
+            </thead>
+            <tbody data-records-body>
+              <tr>
+                <td>
+                  <strong>fixture-api</strong>
+                  <code>GET /v1/orders</code>
+                </td>
+                <td><span class="state state--high">Deprecated</span></td>
+                <td>30 Sep 2026</td>
+                <td>Checkout Web</td>
+                <td><strong class="score score--high">75</strong></td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>fixture-api</strong>
+                  <code>GET /v1/search</code>
+                </td>
+                <td><span class="state state--medium">Date unknown</span></td>
+                <td>Not declared</td>
+                <td>Operations Reporter</td>
+                <td><strong class="score">60</strong></td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>partner-catalog</strong>
+                  <code>Service scope</code>
+                </td>
+                <td><span class="state state--scheduled">Scheduled</span></td>
+                <td>31 Jan 2027</td>
+                <td>Checkout Web</td>
+                <td><strong class="score">45</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section shell" aria-labelledby="visual-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Runtime artifact</p>
+            <h2 id="visual-title">A real CLI assessment, rendered for review</h2>
+          </div>
+          <p>
+            The image is generated from the same JSON used by this page. It is not a product
+            mockup.
+          </p>
+        </div>
+        <figure class="demo-figure">
+          <img
+            src="demo/sunset-sentinel-dashboard.png"
+            alt="Terminal-style Sunset Sentinel assessment showing three ranked synthetic API lifecycle records"
+            width="1200"
+            height="675"
+            loading="lazy"
+          >
+          <figcaption>
+            Rebuilt by <code>scripts/generate_demo_image.py</code> from the committed synthetic
+            assessment.
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="section shell" id="artifacts" aria-labelledby="artifacts-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Reviewable outputs</p>
+            <h2 id="artifacts-title">Take the evidence into your workflow</h2>
+          </div>
+          <p>Each file is generated from the bundled examples with no network access.</p>
+        </div>
+
+        <ul class="artifact-list">
+          <li>
+            <span class="file-kind">JSON</span>
+            <div>
+              <a href="demo/assessment.json" download>Assessment dataset</a>
+              <p>Machine-readable lifecycle records, scores, consumers, and provenance.</p>
+            </div>
+          </li>
+          <li>
+            <span class="file-kind">MD</span>
+            <div>
+              <a href="demo/report.md" download>Migration report</a>
+              <p>A ranked summary for engineering, platform, and product review.</p>
+            </div>
+          </li>
+          <li>
+            <span class="file-kind">ICS</span>
+            <div>
+              <a href="demo/lifecycle.ics" download>Lifecycle calendar</a>
+              <p>Sunset dates ready for a calendar client or planning system.</p>
+            </div>
+          </li>
+          <li>
+            <span class="file-kind">MD</span>
+            <div>
+              <a href="demo/migration-checklist.md" download>Migration checklist</a>
+              <p>Owner-ready tasks organized around each affected dependency.</p>
+            </div>
+          </li>
+          <li>
+            <span class="file-kind">JSON</span>
+            <div>
+              <a href="demo/issue-drafts.json" download>Issue drafts</a>
+              <p>Structured draft issues for downstream automation and triage.</p>
+            </div>
+          </li>
+          <li>
+            <span class="file-kind">JSON</span>
+            <div>
+              <a href="demo/benchmark.json" download>Benchmark evidence</a>
+              <p>Measured local runtime samples with machine and dataset context.</p>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <section class="method">
+        <div class="shell method__grid">
+          <div>
+            <p class="eyebrow">Reproduce it</p>
+            <h2>One offline command, five operational formats.</h2>
+          </div>
+          <div class="command-block" aria-label="Demo generation command">
+            <span aria-hidden="true">$</span>
+            <code>python scripts/demo.py</code>
+          </div>
+          <ol class="method__steps">
+            <li><strong>Import</strong><span>OpenAPI, manual feed, and consumer fixtures</span></li>
+            <li><strong>Assess</strong><span>Lifecycle state, urgency, and blast radius</span></li>
+            <li><strong>Export</strong><span>JSON, Markdown, calendar, checklist, and issues</span></li>
+          </ol>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="shell footer__inner">
+        <p>Sunset Sentinel API v0.1.0</p>
+        <p>This public page contains synthetic fixture data only.</p>
+      </div>
+    </footer>
+  </body>
+</html>
