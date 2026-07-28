@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parents[1]
@@ -20,17 +21,20 @@ def main() -> int:
     run([sys.executable, "-m", "ruff", "format", "--check", "."])
     run([sys.executable, "-m", "ruff", "check", "."])
     run([sys.executable, "-m", "mypy", "src"])
-    run(
-        [
-            sys.executable,
-            "-m",
-            "pytest",
-            "-q",
-            "--cov=src",
-            "--cov-report=term-missing",
-            "--cov-fail-under=80",
-        ]
-    )
+    with tempfile.TemporaryDirectory(prefix="sunset-sentinel-verify-") as scratch:
+        run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-q",
+                "--basetemp",
+                str(Path(scratch) / "pytest"),
+                "--cov=src",
+                "--cov-report=term-missing",
+                "--cov-fail-under=80",
+            ]
+        )
     run([sys.executable, "-m", "build", "--no-isolation"])
     return 0
 

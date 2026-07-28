@@ -77,7 +77,7 @@ include = [
 
 [tool.pytest.ini_options]
 minversion = "9.0"
-addopts = "-ra --strict-config --strict-markers --basetemp=.pytest-tmp"
+addopts = "-ra --strict-config --strict-markers"
 testpaths = ["tests"]
 markers = [
   "integration: exercises adapters and persistent storage",

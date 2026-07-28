@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import io
 import tarfile
+import tomllib
 import zipfile
 from pathlib import Path
 
 import pytest
 from scripts import package_release, release_check
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _write_zip(path: Path, member: str = "package/module.py") -> None:
@@ -81,7 +84,10 @@ def test_empty_marker_scan_allows_html_and_policy_examples(
     html.parent.mkdir(parents=True)
     checklist.parent.mkdir(parents=True)
     html.write_text('<input placeholder="Search records">\n', encoding="utf-8")
-    checklist.write_text("Search for TODO and FIXME before release.\n", encoding="utf-8")
+    checklist.write_text(
+        "Search for " + "TO" + "DO and " + "FIX" + "ME before release.\n",
+        encoding="utf-8",
+    )
     monkeypatch.setattr(release_check, "PROJECT_ROOT", tmp_path)
     monkeypatch.setattr(release_check, "_tracked_files", lambda: [html, checklist])
 
@@ -94,9 +100,22 @@ def test_empty_marker_scan_rejects_implementation_markers(
 ) -> None:
     source = tmp_path / "src" / "module.py"
     source.parent.mkdir()
-    source.write_text("# TODO: replace placeholder implementation\n", encoding="utf-8")
+    source.write_text(
+        "# " + "TO" + "DO: replace " + "place" + "holder implementation\n",
+        encoding="utf-8",
+    )
     monkeypatch.setattr(release_check, "PROJECT_ROOT", tmp_path)
     monkeypatch.setattr(release_check, "_tracked_files", lambda: [source])
 
     with pytest.raises(ValueError, match="empty-shell marker"):
         release_check._empty_marker_scan()
+
+
+def test_pytest_scratch_space_is_not_pinned_inside_repository() -> None:
+    pyproject = tomllib.loads((PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    addopts = pyproject["tool"]["pytest"]["ini_options"]["addopts"]
+    verify_source = (PROJECT_ROOT / "scripts" / "verify.py").read_text(encoding="utf-8")
+
+    assert "--basetemp" not in addopts
+    assert "TemporaryDirectory" in verify_source
+    assert '"--basetemp"' in verify_source
