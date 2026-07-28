@@ -114,8 +114,8 @@ def test_pages_deploys_only_whitelisted_synthetic_artifacts() -> None:
     assert "git diff --exit-code --" in text
     assert "site/. _site/" in text
     assert "docs/demo/${artifact}" in text
-    assert "actions/upload-pages-artifact@v3" in text
-    assert "actions/deploy-pages@v4" in text
+    assert "actions/upload-pages-artifact@v5" in text
+    assert "actions/deploy-pages@v5" in text
     assert "*.db" not in text
 
 
