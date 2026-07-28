@@ -1,0 +1,139 @@
+{
+  "generated_at": "2026-07-23T00:00:00Z",
+  "records": [
+    {
+      "active": true,
+      "consumers": [
+        {
+          "criticality": "critical",
+          "id": "checkout-web",
+          "name": "Checkout Web"
+        }
+      ],
+      "date_conflict": false,
+      "deprecated": true,
+      "deprecation_at": "2026-06-30T23:59:59Z",
+      "documentation_urls": [
+        "http://127.0.0.1:8765/migration/orders"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "operation_id": "listOrders",
+          "path": "/v1/orders"
+        }
+      ],
+      "first_seen_at": "2026-07-23T00:00:00Z",
+      "id": "fixture-api:endpoint:105eee02971b01c3",
+      "last_seen_at": "2026-07-23T00:00:00Z",
+      "replacements": [
+        "GET /v2/orders"
+      ],
+      "scope": "endpoint",
+      "scores": {
+        "blast_radius": 27,
+        "blast_radius_band": "medium",
+        "priority": 75,
+        "priority_band": "high",
+        "urgency": 75,
+        "urgency_band": "high"
+      },
+      "signals": [
+        {
+          "active": true,
+          "compliance": "rfc",
+          "source": "openapi"
+        }
+      ],
+      "state": "deprecated",
+      "sunset_at": "2026-09-30T23:59:59Z",
+      "target_id": "fixture-api"
+    },
+    {
+      "active": true,
+      "consumers": [
+        {
+          "criticality": "medium",
+          "id": "ops-reporter",
+          "name": "Operations Reporter"
+        }
+      ],
+      "date_conflict": false,
+      "deprecated": true,
+      "deprecation_at": null,
+      "documentation_urls": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "operation_id": "search",
+          "path": "/v1/search"
+        }
+      ],
+      "first_seen_at": "2026-07-23T00:00:00Z",
+      "id": "fixture-api:endpoint:7e534561bb65b122",
+      "last_seen_at": "2026-07-23T00:00:00Z",
+      "replacements": [],
+      "scope": "endpoint",
+      "scores": {
+        "blast_radius": 12,
+        "blast_radius_band": "low",
+        "priority": 60,
+        "priority_band": "medium",
+        "urgency": 60,
+        "urgency_band": "medium"
+      },
+      "signals": [
+        {
+          "active": true,
+          "compliance": "rfc",
+          "source": "openapi"
+        }
+      ],
+      "state": "deprecated_date_unknown",
+      "sunset_at": null,
+      "target_id": "fixture-api"
+    },
+    {
+      "active": true,
+      "consumers": [
+        {
+          "criticality": "critical",
+          "id": "checkout-web",
+          "name": "Checkout Web"
+        }
+      ],
+      "date_conflict": false,
+      "deprecated": false,
+      "deprecation_at": "2026-10-01T00:00:00Z",
+      "documentation_urls": [
+        "https://docs.example.test/catalog-v2-migration"
+      ],
+      "endpoints": [],
+      "first_seen_at": "2026-07-23T00:00:00Z",
+      "id": "partner-catalog:service",
+      "last_seen_at": "2026-07-23T00:00:00Z",
+      "replacements": [
+        "partner-catalog-v2"
+      ],
+      "scope": "service",
+      "scores": {
+        "blast_radius": 32,
+        "blast_radius_band": "medium",
+        "priority": 45,
+        "priority_band": "medium",
+        "urgency": 45,
+        "urgency_band": "medium"
+      },
+      "signals": [
+        {
+          "active": true,
+          "compliance": "rfc",
+          "source": "manual"
+        }
+      ],
+      "state": "deprecation_scheduled",
+      "sunset_at": "2027-01-31T23:59:59Z",
+      "target_id": "partner-catalog"
+    }
+  ]
+}

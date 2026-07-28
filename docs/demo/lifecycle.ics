@@ -1,0 +1,54 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Sunset Sentinel API//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:ec985afa973c0d19fd7eab593477b5e63c3f033a@sunset-sentinel
+DTSTAMP:20260723T000000Z
+DTSTART:20260630T235959Z
+SUMMARY:Deprecation: fixture-api GET /v1/orders
+DESCRIPTION:State: deprecated\; Urgency: 75/100\; Consumers: Checkout Web\;
+  Documentation: http://127.0.0.1:8765/migration/orders\; Replacement: GET
+  /v2/orders
+STATUS:TENTATIVE
+TRANSP:TRANSPARENT
+CATEGORIES:API,DEPRECATION
+END:VEVENT
+BEGIN:VEVENT
+UID:6ba60f4f46d5ffb29625a2946df9f6db3ef9f647@sunset-sentinel
+DTSTAMP:20260723T000000Z
+DTSTART:20260930T235959Z
+SUMMARY:Sunset: fixture-api GET /v1/orders
+DESCRIPTION:State: deprecated\; Urgency: 75/100\; Consumers: Checkout Web\;
+  Documentation: http://127.0.0.1:8765/migration/orders\; Replacement: GET
+  /v2/orders
+STATUS:TENTATIVE
+TRANSP:TRANSPARENT
+CATEGORIES:API,SUNSET
+END:VEVENT
+BEGIN:VEVENT
+UID:7827d1180abf65d81bc118de501682d5e970d7fa@sunset-sentinel
+DTSTAMP:20260723T000000Z
+DTSTART:20261001T000000Z
+SUMMARY:Deprecation: partner-catalog (service)
+DESCRIPTION:State: deprecation_scheduled\; Urgency: 45/100\; Consumers: Che
+ ckout Web\; Documentation: https://docs.example.test/catalog-v2-migration\
+ ; Replacement: partner-catalog-v2
+STATUS:TENTATIVE
+TRANSP:TRANSPARENT
+CATEGORIES:API,DEPRECATION
+END:VEVENT
+BEGIN:VEVENT
+UID:c2caec4c33437bc99c1b370000f7ad7441def17b@sunset-sentinel
+DTSTAMP:20260723T000000Z
+DTSTART:20270131T235959Z
+SUMMARY:Sunset: partner-catalog (service)
+DESCRIPTION:State: deprecation_scheduled\; Urgency: 45/100\; Consumers: Che
+ ckout Web\; Documentation: https://docs.example.test/catalog-v2-migration\
+ ; Replacement: partner-catalog-v2
+STATUS:TENTATIVE
+TRANSP:TRANSPARENT
+CATEGORIES:API,SUNSET
+END:VEVENT
+END:VCALENDAR
