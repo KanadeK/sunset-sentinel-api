@@ -23,7 +23,7 @@ classifiers = [
 ]
 dependencies = [
   "APScheduler==3.11.2",
-  "fastapi==0.139.2",
+  "fastapi==0.140.7",
   "httpx==0.28.1",
   "pydantic==2.13.4",
   "PyYAML==6.0.3",
