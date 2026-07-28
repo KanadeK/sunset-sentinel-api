@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
+from hashlib import sha256
+
 from sunset_sentinel_api.adapters.http_client import CachedLifecycleResponse
 from sunset_sentinel_api.adapters.sqlite_repository import SQLiteRepository
 
@@ -40,3 +43,34 @@ class SQLiteHttpCache:
             expires_at=entry.expires_at,
             redacted_url=entry.url,
         )
+
+
+class SQLiteRequestPacingStore:
+    """Coordinate per-origin request intervals and Retry-After across processes."""
+
+    def __init__(self, repository: SQLiteRepository) -> None:
+        self._repository = repository
+
+    def claim(
+        self,
+        origin: str,
+        *,
+        requested_at: datetime,
+        minimum_interval: timedelta,
+    ) -> datetime | None:
+        """Reserve an origin request using one SQLite immediate transaction."""
+
+        return self._repository.claim_origin_request(
+            _origin_key(origin),
+            requested_at=requested_at,
+            minimum_interval=minimum_interval,
+        )
+
+    def defer(self, origin: str, *, until: datetime) -> None:
+        """Persist the latest Retry-After deadline for an origin."""
+
+        self._repository.defer_origin_request(_origin_key(origin), until=until)
+
+
+def _origin_key(origin: str) -> str:
+    return f"sha256:{sha256(origin.encode('utf-8')).hexdigest()}"

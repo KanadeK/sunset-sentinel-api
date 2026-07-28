@@ -84,6 +84,22 @@ class CacheStore(Protocol):
         """Insert or replace one entry."""
 
 
+class RequestPacingStore(Protocol):
+    """Atomically coordinate origin request pacing across client processes."""
+
+    def claim(
+        self,
+        origin: str,
+        *,
+        requested_at: datetime,
+        minimum_interval: timedelta,
+    ) -> datetime | None:
+        """Reserve a request or return the earliest permitted request time."""
+
+    def defer(self, origin: str, *, until: datetime) -> None:
+        """Persist an origin-supplied retry deadline."""
+
+
 class InMemoryCache:
     """Thread-safe in-process cache useful for the CLI and deterministic tests."""
 
@@ -157,6 +173,7 @@ class HttpLifecycleClient:
         allowed_hosts: Iterable[str],
         clock: Clock,
         cache: CacheStore | None = None,
+        request_pacing: RequestPacingStore | None = None,
         client: httpx.Client | None = None,
         transport: httpx.BaseTransport | None = None,
         allow_loopback: bool = False,
@@ -198,6 +215,7 @@ class HttpLifecycleClient:
         self._wildcard_suffixes = frozenset(wildcard_suffixes)
         self._clock = clock
         self._cache = cache if cache is not None else InMemoryCache()
+        self._request_pacing = request_pacing
         self._allow_loopback = allow_loopback
         self._default_ttl = timedelta(seconds=default_ttl_seconds)
         self._maximum_ttl = timedelta(seconds=maximum_ttl_seconds)
@@ -259,6 +277,12 @@ class HttpLifecycleClient:
             )
 
         next_request_at = self._next_request_at(validated.origin)
+        if next_request_at is None and self._request_pacing is not None:
+            next_request_at = self._request_pacing.claim(
+                validated.origin,
+                requested_at=now,
+                minimum_interval=self._minimum_origin_interval,
+            )
         if next_request_at is not None and now < next_request_at:
             if cached is not None:
                 return self._result_from_cache(
@@ -371,6 +395,8 @@ class HttpLifecycleClient:
         if status_code in {429, 503}:
             retry_at = self._retry_at(headers=retained, now=now)
             self._blocked_until[validated.origin] = retry_at
+            if self._request_pacing is not None:
+                self._request_pacing.defer(validated.origin, until=retry_at)
             return FetchResult(
                 status=FetchStatus.RETRY_LATER,
                 url=validated.safe_url,
@@ -540,7 +566,10 @@ class HttpLifecycleClient:
         max_age = directives.get("max-age")
         if max_age is not None:
             try:
-                seconds = max(0, int(max_age.strip('"')))
+                seconds = min(
+                    max(0, int(max_age.strip('"'))),
+                    int(self._maximum_ttl.total_seconds()),
+                )
             except ValueError:
                 seconds = int(self._default_ttl.total_seconds())
             ttl = timedelta(seconds=seconds)
@@ -553,7 +582,11 @@ class HttpLifecycleClient:
         if raw_value is not None:
             normalized = raw_value.strip()
             if normalized.isascii() and normalized.isdigit():
-                delay = timedelta(seconds=int(normalized))
+                seconds = min(
+                    int(normalized),
+                    int(self._maximum_retry_after.total_seconds()),
+                )
+                delay = timedelta(seconds=seconds)
             else:
                 try:
                     parsed = parse_http_date(

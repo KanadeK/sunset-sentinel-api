@@ -27,12 +27,19 @@ _MAX_LIFECYCLE_HEADER_LENGTH = 1024
 _MAX_LINK_HEADER_LENGTH = 8192
 _EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 _SF_KEY = r"[a-z*][a-z0-9_.*-]*"
-_SF_STRING = r'"(?:[^"\\\x00-\x1f\x7f]|\\["\\])*"'
-_SF_SYMBOL = r"[A-Za-z*][A-Za-z0-9_.*:/-]*"
-_SF_NUMBER = r"-?[0-9]+(?:\.[0-9]{1,3})?"
-_SF_BYTES = r":[A-Za-z0-9+/]*={0,2}:"
-_SF_BARE_ITEM = rf"(?:{_SF_STRING}|{_SF_SYMBOL}|{_SF_NUMBER}|{_SF_BYTES}|\?[01]|@-?[0-9]{{1,15}})"
-_SF_PARAMETER = rf";[ \t]*{_SF_KEY}(?:={_SF_BARE_ITEM})?"
+_SF_STRING = r'"(?:[\x20-\x21\x23-\x24\x26-\x5b\x5d-\x7e]|%|\\["\\])*"'
+_SF_SYMBOL = r"[A-Za-z*][!#$%&'*+\-.^_`|~0-9A-Za-z:/]*"
+_SF_NUMBER = r"(?:-?[0-9]{1,15}|-?[0-9]{1,12}\.[0-9]{1,3})"
+_SF_BYTES = (
+    r":(?:[A-Za-z0-9+/]{4})*"
+    r"(?:[A-Za-z0-9+/]{2}(?:==)?|[A-Za-z0-9+/]{3}=?)?:"
+)
+_SF_DISPLAY_STRING = r'%"(?:[\x20-\x21\x23-\x24\x26-\x5b\x5d-\x7e]|\\|%[0-9a-f]{2})*"'
+_SF_BARE_ITEM = (
+    rf"(?:{_SF_STRING}|{_SF_DISPLAY_STRING}|{_SF_SYMBOL}|{_SF_NUMBER}|"
+    rf"{_SF_BYTES}|\?[01]|@-?[0-9]{{1,15}})"
+)
+_SF_PARAMETER = rf"; *{_SF_KEY}(?:={_SF_BARE_ITEM})?"
 _SF_DATE_RE = re.compile(rf"^@(?P<seconds>-?[0-9]{{1,15}})(?P<parameters>(?:{_SF_PARAMETER})*)$")
 _LINK_TARGET_RE = re.compile(r"^<(?P<target>[^>]*)>(?P<parameters>.*)$")
 _LINK_PARAMETER_NAME_RE = re.compile(r"^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$")

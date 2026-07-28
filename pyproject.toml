@@ -54,6 +54,9 @@ Source = "https://github.com/KanadeK/sunset-sentinel-api"
 [tool.hatch.build.targets.wheel]
 packages = ["src/sunset_sentinel_api"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"examples" = "sunset_sentinel_api/examples"
+
 [tool.hatch.build.targets.sdist]
 include = [
   "/src",

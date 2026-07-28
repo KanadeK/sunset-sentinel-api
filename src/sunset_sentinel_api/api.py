@@ -27,11 +27,12 @@ from sunset_sentinel_api.exporters import (
     render_markdown_report,
     render_migration_checklist,
 )
+from sunset_sentinel_api.resources import bundled_sample_directory
 from sunset_sentinel_api.services.assessment import Assessment
 from sunset_sentinel_api.services.monitor import assess_repository, import_file_sources
 
 _WEB_DIRECTORY = Path(__file__).resolve().parent / "web"
-_DEFAULT_SAMPLE_DIRECTORY = Path(__file__).resolve().parents[2] / "examples"
+_DEFAULT_SAMPLE_DIRECTORY = bundled_sample_directory()
 _EXPORT_NAMES = frozenset({"json", "markdown", "calendar", "checklist", "issues"})
 _MUTATION_HEADER_VALUE = "dashboard-v1"
 

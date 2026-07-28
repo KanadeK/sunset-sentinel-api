@@ -365,9 +365,14 @@ def _fold_ics_line(line: str) -> str:
     for character in line:
         encoded_length = len(character.encode("utf-8"))
         if current and current_octets + encoded_length > 75:
-            folded.append(current)
-            current = f" {character}"
-            current_octets = 1 + encoded_length
+            if current.endswith(" "):
+                folded.append(current[:-1])
+                current = f"  {character}"
+                current_octets = 2 + encoded_length
+            else:
+                folded.append(current)
+                current = f" {character}"
+                current_octets = 1 + encoded_length
         else:
             current += character
             current_octets += encoded_length

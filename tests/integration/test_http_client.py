@@ -256,6 +256,44 @@ def test_retry_after_http_date_is_parsed_with_injected_clock() -> None:
     client.close()
 
 
+def test_extreme_cache_and_retry_numbers_are_clamped_before_timedelta() -> None:
+    responses = iter(
+        (
+            {
+                "status_code": 200,
+                "headers": {
+                    "Cache-Control": f"max-age={'9' * 1000}",
+                    "Deprecation": "@1688169599",
+                },
+            },
+            {
+                "status_code": 429,
+                "headers": {"Retry-After": "9" * 1000},
+            },
+        )
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        response = next(responses)
+        return httpx.Response(request=request, **response)
+
+    clock = FrozenClock(NOW)
+    client = make_client(
+        httpx.MockTransport(handler),
+        clock,
+        minimum_origin_interval_seconds=0,
+    )
+
+    cached = client.fetch("https://api.example.test/cache")
+    limited = client.fetch("https://api.example.test/retry")
+
+    assert cached.status is FetchStatus.SUCCESS
+    assert cached.expires_at == NOW + timedelta(hours=6)
+    assert limited.status is FetchStatus.RETRY_LATER
+    assert limited.next_request_at == NOW + timedelta(days=1)
+    client.close()
+
+
 @pytest.mark.parametrize(
     ("url", "error_code"),
     [

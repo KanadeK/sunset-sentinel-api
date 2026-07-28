@@ -98,6 +98,30 @@ def scan_http_target(
         response_url=result.url,
     )
     if not parsed.has_signal:
+        statuses = {parsed.deprecation.status, parsed.sunset.status}
+        if statuses == {ParseStatus.ABSENT}:
+            signal_key = _signal_key(
+                target_id=target.target_id,
+                endpoint_key=endpoint.key,
+                safe_url=result.url,
+            )
+            existing = repository.get_signal(signal_key)
+            if existing is not None and existing.signal.active:
+                withdrawn = existing.signal.model_copy(
+                    update={
+                        "active": False,
+                        "observed_at": now,
+                        "raw_sha256": _header_digest(result.headers),
+                        "diagnostics": parsed.diagnostics,
+                    }
+                )
+                stored = repository.upsert_signal(withdrawn)
+                return HttpScanOutcome(
+                    fetch=result,
+                    parsed_signal=withdrawn,
+                    stored=stored,
+                    diagnostics=parsed.diagnostics,
+                )
         return HttpScanOutcome(fetch=result, diagnostics=parsed.diagnostics)
 
     compliance = (

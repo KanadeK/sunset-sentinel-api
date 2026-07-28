@@ -215,7 +215,7 @@ def test_dependency_foreign_key_failure_leaves_existing_rows_intact(
     repository.close()
 
 
-def test_http_cache_is_bounded_and_host_request_time_is_monotonic(
+def test_http_cache_is_bounded(
     tmp_path: Path,
 ) -> None:
     repository = SQLiteRepository(
@@ -250,17 +250,6 @@ def test_http_cache_is_bounded_and_host_request_time_is_monotonic(
     assert repository.get_http_cache("second") is None
     assert repository.get_http_cache("third") is not None
 
-    latest = repository.set_host_last_request(
-        "API.EXAMPLE.TEST.",
-        requested_at=NOW + timedelta(minutes=5),
-    )
-    unchanged = repository.set_host_last_request(
-        "api.example.test",
-        requested_at=NOW,
-    )
-    assert latest == NOW + timedelta(minutes=5)
-    assert unchanged == latest
-    assert repository.get_host_last_request("api.example.test") == latest
     repository.close()
 
 
@@ -276,4 +265,39 @@ def test_invalid_persisted_json_never_escapes_as_a_domain_model(tmp_path: Path) 
 
     with pytest.raises(RepositoryDataError, match="consumer payload"):
         repository.list_consumers()
+    repository.close()
+
+
+def test_stale_consumer_snapshot_cannot_overwrite_newer_payload(
+    tmp_path: Path,
+) -> None:
+    repository = SQLiteRepository(tmp_path / "consumer-stale.sqlite", clock=FrozenClock(NOW))
+    newer_at = NOW + timedelta(hours=2)
+    endpoint = EndpointRef(target_id="payments", method="GET", path="/v1/orders")
+    newer_consumer = Consumer(
+        id="checkout",
+        name="Checkout Platform",
+        criticality=Criticality.CRITICAL,
+    )
+    newer_dependency = ConsumerDependency(
+        consumer_id="checkout",
+        endpoint_key=endpoint.key,
+        evidence="services/checkout/new.py",
+    )
+    repository.upsert_consumer(newer_consumer, observed_at=newer_at)
+    repository.upsert_dependency(newer_dependency, observed_at=newer_at)
+
+    stale_consumer = Consumer(id="checkout", name="Old Checkout")
+    stale_dependency = ConsumerDependency(
+        consumer_id="checkout",
+        endpoint_key=endpoint.key,
+        evidence="services/checkout/old.py",
+    )
+    returned_consumer = repository.upsert_consumer(stale_consumer, observed_at=NOW)
+    returned_dependency = repository.upsert_dependency(stale_dependency, observed_at=NOW)
+
+    assert returned_consumer == newer_consumer
+    assert returned_dependency == newer_dependency
+    assert repository.list_consumers() == (newer_consumer,)
+    assert repository.list_dependencies() == (newer_dependency,)
     repository.close()

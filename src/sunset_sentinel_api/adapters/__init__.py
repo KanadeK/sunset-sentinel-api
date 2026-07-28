@@ -21,7 +21,10 @@ from sunset_sentinel_api.adapters.http_client import (
     InMemoryCache,
     redact_query_values,
 )
-from sunset_sentinel_api.adapters.sqlite_http_cache import SQLiteHttpCache
+from sunset_sentinel_api.adapters.sqlite_http_cache import (
+    SQLiteHttpCache,
+    SQLiteRequestPacingStore,
+)
 from sunset_sentinel_api.adapters.sqlite_repository import (
     LifecycleChange,
     SQLiteRepository,
@@ -40,6 +43,7 @@ __all__ = [
     "LifecycleChange",
     "SQLiteHttpCache",
     "SQLiteRepository",
+    "SQLiteRequestPacingStore",
     "SourceBatch",
     "StoredLifecycleSignal",
     "load_consumers_file",

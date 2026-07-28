@@ -8,7 +8,7 @@ import sqlite3
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from threading import RLock
 from typing import Literal, cast
@@ -90,9 +90,10 @@ _SCHEMA_STATEMENTS = (
     ) STRICT
     """,
     """
-    CREATE TABLE IF NOT EXISTS host_request_state (
-        host TEXT PRIMARY KEY,
-        last_requested_at TEXT NOT NULL
+    CREATE TABLE IF NOT EXISTS origin_request_state (
+        origin_key TEXT PRIMARY KEY,
+        last_requested_at TEXT NOT NULL,
+        blocked_until TEXT
     ) STRICT
     """,
     """
@@ -255,7 +256,7 @@ class SQLiteRepository:
         with self._transaction() as connection:
             existing = connection.execute(
                 """
-                SELECT first_seen_at, last_seen_at
+                SELECT payload_json, first_seen_at, last_seen_at
                 FROM consumers
                 WHERE consumer_id = ?
                 """,
@@ -271,10 +272,11 @@ class SQLiteRepository:
                     (consumer.id, payload, timestamp, timestamp),
                 )
             else:
-                last_seen = max(
-                    _parse_datetime(_row_str(existing, "last_seen_at")),
-                    _parse_datetime(timestamp),
-                )
+                previous_last_seen = _parse_datetime(_row_str(existing, "last_seen_at"))
+                incoming_seen = _parse_datetime(timestamp)
+                if incoming_seen < previous_last_seen:
+                    return _restore_consumer(_row_str(existing, "payload_json"))
+                last_seen = max(previous_last_seen, incoming_seen)
                 connection.execute(
                     """
                     UPDATE consumers
@@ -298,7 +300,7 @@ class SQLiteRepository:
         with self._transaction() as connection:
             existing = connection.execute(
                 """
-                SELECT last_seen_at
+                SELECT payload_json, last_seen_at
                 FROM consumer_dependencies
                 WHERE consumer_id = ? AND endpoint_key = ?
                 """,
@@ -324,10 +326,11 @@ class SQLiteRepository:
                     ),
                 )
             else:
-                last_seen = max(
-                    _parse_datetime(_row_str(existing, "last_seen_at")),
-                    _parse_datetime(timestamp),
-                )
+                previous_last_seen = _parse_datetime(_row_str(existing, "last_seen_at"))
+                incoming_seen = _parse_datetime(timestamp)
+                if incoming_seen < previous_last_seen:
+                    return _restore_dependency(_row_str(existing, "payload_json"))
+                last_seen = max(previous_last_seen, incoming_seen)
                 connection.execute(
                     """
                     UPDATE consumer_dependencies
@@ -342,6 +345,69 @@ class SQLiteRepository:
                     ),
                 )
         return dependency
+
+    def reconcile_consumer_snapshot(
+        self,
+        *,
+        consumer_ids: set[str],
+        dependency_keys: set[tuple[str, str]],
+        observed_at: datetime,
+    ) -> tuple[int, int]:
+        """Remove stale consumers and edges absent from an authoritative snapshot."""
+
+        timestamp = as_utc(observed_at, field_name="observed_at")
+        removed_dependencies = 0
+        removed_consumers = 0
+        with self._transaction() as connection:
+            dependency_rows = connection.execute(
+                """
+                SELECT consumer_id, endpoint_key, last_seen_at
+                FROM consumer_dependencies
+                """
+            ).fetchall()
+            for row in dependency_rows:
+                key = (
+                    _row_str(row, "consumer_id"),
+                    _row_str(row, "endpoint_key"),
+                )
+                if (
+                    key not in dependency_keys
+                    and _parse_datetime(_row_str(row, "last_seen_at")) <= timestamp
+                ):
+                    connection.execute(
+                        """
+                        DELETE FROM consumer_dependencies
+                        WHERE consumer_id = ? AND endpoint_key = ?
+                        """,
+                        key,
+                    )
+                    removed_dependencies += 1
+
+            consumer_rows = connection.execute(
+                "SELECT consumer_id, last_seen_at FROM consumers"
+            ).fetchall()
+            for row in consumer_rows:
+                consumer_id = _row_str(row, "consumer_id")
+                if (
+                    consumer_id not in consumer_ids
+                    and _parse_datetime(_row_str(row, "last_seen_at")) <= timestamp
+                ):
+                    cascade_count = connection.execute(
+                        """
+                        SELECT count(*)
+                        FROM consumer_dependencies
+                        WHERE consumer_id = ?
+                        """,
+                        (consumer_id,),
+                    ).fetchone()
+                    if cascade_count is not None:
+                        removed_dependencies += _row_index_int(cascade_count, 0)
+                    connection.execute(
+                        "DELETE FROM consumers WHERE consumer_id = ?",
+                        (consumer_id,),
+                    )
+                    removed_consumers += 1
+        return removed_consumers, removed_dependencies
 
     def upsert_signal(self, signal: LifecycleSignal) -> StoredLifecycleSignal:
         """Reconcile a signal and append a change only for a material transition."""
@@ -679,57 +745,97 @@ class SQLiteRepository:
             )
         return int(cursor.rowcount)
 
-    def get_host_last_request(self, host: str) -> datetime | None:
-        """Return the most recent persisted request time for a host or origin."""
-
-        normalized = _normalize_host_key(host)
-        with self._read_lock():
-            row = self._connection.execute(
-                """
-                SELECT last_requested_at
-                FROM host_request_state
-                WHERE host = ?
-                """,
-                (normalized,),
-            ).fetchone()
-        if row is None:
-            return None
-        return _parse_datetime(_row_str(row, "last_requested_at"))
-
-    def set_host_last_request(
+    def claim_origin_request(
         self,
-        host: str,
+        origin_key: str,
         *,
-        requested_at: datetime | None = None,
-    ) -> datetime:
-        """Monotonically update a host's last-request instant."""
+        requested_at: datetime,
+        minimum_interval: timedelta,
+    ) -> datetime | None:
+        """Atomically reserve an origin request or return its next eligible time."""
 
-        normalized = _normalize_host_key(host)
-        timestamp = self._timestamp(requested_at)
+        key = _validate_cache_key(origin_key)
+        if minimum_interval < timedelta(0):
+            raise ValueError("minimum_interval must not be negative")
+        requested = as_utc(requested_at, field_name="requested_at")
         with self._transaction() as connection:
-            connection.execute(
-                """
-                INSERT INTO host_request_state(host, last_requested_at)
-                VALUES (?, ?)
-                ON CONFLICT(host) DO UPDATE SET
-                    last_requested_at = max(
-                        host_request_state.last_requested_at,
-                        excluded.last_requested_at
-                    )
-                """,
-                (normalized, timestamp),
-            )
             row = connection.execute(
                 """
-                SELECT last_requested_at
-                FROM host_request_state
-                WHERE host = ?
+                SELECT last_requested_at, blocked_until
+                FROM origin_request_state
+                WHERE origin_key = ?
                 """,
-                (normalized,),
+                (key,),
             ).fetchone()
-        if row is None:
-            raise RepositoryError("host request state disappeared during its transaction")
-        return _parse_datetime(_row_str(row, "last_requested_at"))
+            candidates: list[datetime] = []
+            if row is not None:
+                candidates.append(
+                    _parse_datetime(_row_str(row, "last_requested_at")) + minimum_interval
+                )
+                blocked_value: object = row["blocked_until"]
+                if blocked_value is not None:
+                    if not isinstance(blocked_value, str):
+                        raise RepositoryDataError("stored origin retry deadline is not text")
+                    candidates.append(_parse_datetime(blocked_value))
+            next_request_at = max(candidates) if candidates else None
+            if next_request_at is not None and requested < next_request_at:
+                return next_request_at
+
+            connection.execute(
+                """
+                INSERT INTO origin_request_state(
+                    origin_key,
+                    last_requested_at,
+                    blocked_until
+                )
+                VALUES (?, ?, NULL)
+                ON CONFLICT(origin_key) DO UPDATE SET
+                    last_requested_at = excluded.last_requested_at,
+                    blocked_until = NULL
+                """,
+                (key, _format_datetime(requested)),
+            )
+        return None
+
+    def defer_origin_request(
+        self,
+        origin_key: str,
+        *,
+        until: datetime,
+    ) -> datetime:
+        """Monotonically persist an origin retry deadline."""
+
+        key = _validate_cache_key(origin_key)
+        deadline = as_utc(until, field_name="until")
+        now = as_utc(self._clock.now(), field_name="clock")
+        with self._transaction() as connection:
+            row = connection.execute(
+                """
+                SELECT blocked_until
+                FROM origin_request_state
+                WHERE origin_key = ?
+                """,
+                (key,),
+            ).fetchone()
+            if row is not None and row["blocked_until"] is not None:
+                blocked_value: object = row["blocked_until"]
+                if not isinstance(blocked_value, str):
+                    raise RepositoryDataError("stored origin retry deadline is not text")
+                deadline = max(deadline, _parse_datetime(blocked_value))
+            connection.execute(
+                """
+                INSERT INTO origin_request_state(
+                    origin_key,
+                    last_requested_at,
+                    blocked_until
+                )
+                VALUES (?, ?, ?)
+                ON CONFLICT(origin_key) DO UPDATE SET
+                    blocked_until = excluded.blocked_until
+                """,
+                (key, _format_datetime(now), _format_datetime(deadline)),
+            )
+        return deadline
 
     def _append_change(
         self,
@@ -814,6 +920,7 @@ def _model_json(model: BaseModel) -> str:
 def _material_signal_payload(signal: LifecycleSignal) -> dict[str, object]:
     payload = signal.model_dump(mode="json")
     payload.pop("observed_at", None)
+    payload.pop("raw_sha256", None)
     return payload
 
 
@@ -935,24 +1042,6 @@ def _validate_cache_key(value: str) -> str:
     if not value or len(value) > 512 or _CONTROL_RE.search(value):
         raise ValueError("cache key must be a non-empty, control-free string")
     return value
-
-
-def _normalize_host_key(value: str) -> str:
-    normalized = value.strip().rstrip(".").casefold()
-    if (
-        not normalized
-        or len(normalized) > 512
-        or _CONTROL_RE.search(normalized)
-        or any(character.isspace() for character in normalized)
-        or "/" in normalized
-        or "\\" in normalized
-        or "@" in normalized
-    ):
-        raise ValueError("host must be a safe hostname or origin key")
-    try:
-        return normalized.encode("idna").decode("ascii")
-    except UnicodeError as exc:
-        raise ValueError("host contains invalid internationalized characters") from exc
 
 
 def _format_datetime(value: datetime) -> str:

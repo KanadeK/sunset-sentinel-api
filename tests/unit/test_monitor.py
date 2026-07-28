@@ -289,6 +289,132 @@ def test_naive_ingestion_time_fails_before_any_write(tmp_path: Path) -> None:
     repository.close()
 
 
+def test_authoritative_file_snapshots_withdraw_missing_signals_and_edges(
+    tmp_path: Path,
+) -> None:
+    openapi_path = tmp_path / "openapi.json"
+    consumers_path = tmp_path / "consumers.json"
+    openapi_path.write_text(
+        json.dumps(
+            {
+                "openapi": "3.1.0",
+                "info": {"title": "Payments", "version": "1.0.0"},
+                "paths": {
+                    "/v1/orders": {
+                        "get": {
+                            "operationId": "listOrders",
+                            "deprecated": True,
+                        }
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    consumers_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "license": "MIT",
+                "consumers": [
+                    {
+                        "id": "checkout",
+                        "name": "Checkout",
+                        "criticality": "critical",
+                    }
+                ],
+                "dependencies": [
+                    {
+                        "consumer_id": "checkout",
+                        "target_id": "payments",
+                        "method": "GET",
+                        "path": "/v1/orders",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    database = tmp_path / "reconcile.sqlite"
+    with SQLiteRepository(database) as repository:
+        first = import_file_sources(
+            repository,
+            observed_at=NOW,
+            openapi_files={"payments": openapi_path},
+            consumer_files=(consumers_path,),
+        )
+
+        openapi_path.write_text(
+            json.dumps(
+                {
+                    "openapi": "3.1.0",
+                    "info": {"title": "Payments", "version": "1.0.1"},
+                    "paths": {
+                        "/v1/orders": {
+                            "get": {
+                                "operationId": "listOrders",
+                                "deprecated": False,
+                            }
+                        }
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+        consumers_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "license": "MIT",
+                    "consumers": [
+                        {
+                            "id": "checkout",
+                            "name": "Checkout",
+                            "criticality": "critical",
+                        }
+                    ],
+                    "dependencies": [],
+                }
+            ),
+            encoding="utf-8",
+        )
+        second = import_file_sources(
+            repository,
+            observed_at=NOW + timedelta(hours=1),
+            openapi_files={"payments": openapi_path},
+            consumer_files=(consumers_path,),
+        )
+
+        assert repository.list_signals(active_only=True) == ()
+        assert repository.list_dependencies() == ()
+        assert [consumer.id for consumer in repository.list_consumers()] == ["checkout"]
+        assert [change.change_type for change in repository.list_changes()] == [
+            "discovered",
+            "withdrawn",
+        ]
+
+        consumers_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "license": "MIT",
+                    "consumers": [],
+                    "dependencies": [],
+                }
+            ),
+            encoding="utf-8",
+        )
+        import_file_sources(
+            repository,
+            observed_at=NOW + timedelta(hours=2),
+            consumer_files=(consumers_path,),
+        )
+        assert repository.list_consumers() == ()
+
+    assert first.discovered == 1
+    assert second.withdrawn == 1
+
+
 def test_ingest_summary_is_frozen() -> None:
     summary = IngestSummary(
         consumers=0,

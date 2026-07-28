@@ -11,6 +11,7 @@ from pydantic import Field
 
 from sunset_sentinel_api.adapters.file_sources import SourceBatch, load_file_sources
 from sunset_sentinel_api.adapters.sqlite_repository import SQLiteRepository
+from sunset_sentinel_api.domain.enums import SignalSource
 from sunset_sentinel_api.domain.models import FrozenModel, as_utc
 from sunset_sentinel_api.services.assessment import Assessment, assess_lifecycle
 
@@ -53,6 +54,34 @@ def ingest_batch(
     for signal in batch.signals:
         normalized_signal = signal.model_copy(update={"observed_at": normalized_observed_at})
         repository.upsert_signal(normalized_signal)
+
+    present_signal_keys = {signal.signal_key for signal in batch.signals}
+    authoritative_openapi_targets = set(batch.authoritative_openapi_targets)
+    for record in repository.list_signal_records(active_only=True):
+        signal = record.signal
+        covered_by_snapshot = (
+            signal.source is SignalSource.OPENAPI
+            and signal.target_id in authoritative_openapi_targets
+        ) or (signal.source is SignalSource.MANUAL and batch.manual_signals_authoritative)
+        if covered_by_snapshot and signal.signal_key not in present_signal_keys:
+            repository.upsert_signal(
+                signal.model_copy(
+                    update={
+                        "active": False,
+                        "observed_at": normalized_observed_at,
+                    }
+                )
+            )
+
+    if batch.consumers_authoritative:
+        repository.reconcile_consumer_snapshot(
+            consumer_ids={consumer.id for consumer in batch.consumers},
+            dependency_keys={
+                (dependency.consumer_id, dependency.endpoint_key)
+                for dependency in batch.dependencies
+            },
+            observed_at=normalized_observed_at,
+        )
 
     new_changes = repository.list_changes()[changes_before:]
     change_counts = Counter(change.change_type for change in new_changes)

@@ -19,7 +19,10 @@ from sunset_sentinel_api import __version__
 from sunset_sentinel_api.adapters.file_sources import FileSourceError
 from sunset_sentinel_api.adapters.fixture_server import main as fixture_server_main
 from sunset_sentinel_api.adapters.http_client import HttpLifecycleClient
-from sunset_sentinel_api.adapters.sqlite_http_cache import SQLiteHttpCache
+from sunset_sentinel_api.adapters.sqlite_http_cache import (
+    SQLiteHttpCache,
+    SQLiteRequestPacingStore,
+)
 from sunset_sentinel_api.adapters.sqlite_repository import RepositoryError, SQLiteRepository
 from sunset_sentinel_api.clock import FrozenClock, SystemClock
 from sunset_sentinel_api.domain.enums import HeaderMode
@@ -31,6 +34,7 @@ from sunset_sentinel_api.exporters import (
     render_markdown_report,
     render_migration_checklist,
 )
+from sunset_sentinel_api.resources import bundled_sample_directory
 from sunset_sentinel_api.services.http_scan import HttpScanTarget, scan_http_target
 from sunset_sentinel_api.services.monitor import assess_repository, import_file_sources
 from sunset_sentinel_api.services.scheduler import SentinelScheduler, scan_job_id
@@ -126,7 +130,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Import the bundled offline sample and generate reviewable artifacts.",
     )
     _add_database_argument(demo)
-    demo.add_argument("--sample-dir", type=Path, default=Path("examples"))
+    demo.add_argument("--sample-dir", type=Path, default=bundled_sample_directory())
     demo.add_argument("--output-dir", type=Path, default=Path("demo-output"))
     _add_timestamp_argument(demo, default="2026-07-23T00:00:00Z")
 
@@ -179,7 +183,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_database_argument(serve)
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8000)
-    serve.add_argument("--sample-dir", type=Path, default=Path("examples"))
+    serve.add_argument("--sample-dir", type=Path, default=bundled_sample_directory())
 
     fixture = subparsers.add_parser(
         "fixture-server",
@@ -245,14 +249,18 @@ def _run_import(args: argparse.Namespace) -> int:
 def _run_http_scan(args: argparse.Namespace) -> int:
     if not args.allow_host:
         raise ValueError("--allow-host is required for every HTTP scan")
+    if args.min_request_interval < 1:
+        raise ValueError("--min-request-interval must be at least 1 second")
     observed_at = _timestamp(args.at)
     clock = FrozenClock(observed_at)
     with SQLiteRepository(args.database, clock=clock) as repository:
         cache = SQLiteHttpCache(repository)
+        request_pacing = SQLiteRequestPacingStore(repository)
         with HttpLifecycleClient(
             allowed_hosts=tuple(args.allow_host),
             clock=clock,
             cache=cache,
+            request_pacing=request_pacing,
             allow_loopback=args.allow_loopback,
             default_ttl_seconds=args.cache_ttl,
             minimum_origin_interval_seconds=args.min_request_interval,
@@ -313,7 +321,7 @@ def _run_demo(args: argparse.Namespace) -> int:
         summary = import_file_sources(
             repository,
             observed_at=now,
-            openapi_files={"acme-commerce": sample_dir / "openapi.yaml"},
+            openapi_files={"fixture-api": sample_dir / "openapi.yaml"},
             manual_feed_files=(sample_dir / "manual-feed.yaml",),
             consumer_files=(sample_dir / "consumers.json",),
         )

@@ -98,7 +98,10 @@ def test_deprecation_accepts_rfc_9745_structured_date() -> None:
 
 
 def test_deprecation_accepts_legal_parameters_and_negative_epoch() -> None:
-    parsed = parse_deprecation_header('@-1;source="vendor"', now=NOW)
+    parsed = parse_deprecation_header(
+        '@-1;source="vendor";blob=:dmVuZG9y:;label=%"sunset%20soon"',
+        now=NOW,
+    )
 
     assert parsed.status is ParseStatus.VALID
     assert parsed.value == datetime(1969, 12, 31, 23, 59, 59, tzinfo=UTC)
@@ -133,6 +136,25 @@ def test_deprecation_rejects_non_date_and_out_of_range_values(value: str) -> Non
 
     assert parsed.status is ParseStatus.INVALID
     assert parsed.deprecated is False
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        '@1;source="供应商"',
+        "@1;value=1234567890123456",
+        "@1;value=1234567890123.1",
+        "@1;blob=:a:",
+        "@1;blob=:abc===",
+        "@1;\tkey=value",
+        '@1;label=%"UPPER%2FHEX"',
+    ],
+)
+def test_deprecation_rejects_malformed_structured_parameters(value: str) -> None:
+    parsed = parse_deprecation_header(value, now=NOW, mode=HeaderMode.STRICT)
+
+    assert parsed.status is ParseStatus.INVALID
+    assert parsed.value is None
 
 
 def test_deprecation_rejects_duplicate_field_instances() -> None:

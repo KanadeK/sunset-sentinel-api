@@ -56,6 +56,9 @@ class SourceBatch:
     signals: tuple[LifecycleSignal, ...] = ()
     consumers: tuple[Consumer, ...] = ()
     dependencies: tuple[ConsumerDependency, ...] = ()
+    authoritative_openapi_targets: tuple[str, ...] = ()
+    manual_signals_authoritative: bool = False
+    consumers_authoritative: bool = False
 
 
 class _StrictInput(BaseModel):
@@ -361,7 +364,10 @@ def load_openapi_file(
                 )
             )
 
-    return SourceBatch(signals=_sort_signals(signals))
+    return SourceBatch(
+        signals=_sort_signals(signals),
+        authoritative_openapi_targets=(target_id,),
+    )
 
 
 def load_manual_feed_file(
@@ -417,7 +423,10 @@ def load_manual_feed_file(
                 raw_sha256=raw_sha256,
             )
         )
-    return SourceBatch(signals=_sort_signals(signals))
+    return SourceBatch(
+        signals=_sort_signals(signals),
+        manual_signals_authoritative=True,
+    )
 
 
 def load_consumers_file(path: str | Path) -> SourceBatch:
@@ -485,6 +494,7 @@ def load_consumers_file(path: str | Path) -> SourceBatch:
                 ),
             )
         ),
+        consumers_authoritative=True,
     )
 
 
@@ -494,11 +504,17 @@ def merge_source_batches(*batches: SourceBatch) -> SourceBatch:
     signals: list[LifecycleSignal] = []
     consumers: list[Consumer] = []
     dependencies: list[ConsumerDependency] = []
+    authoritative_openapi_targets: set[str] = set()
+    manual_signals_authoritative = False
+    consumers_authoritative = False
     signal_ids: set[tuple[str, SignalSource, str]] = set()
     consumer_ids: set[str] = set()
     dependency_ids: set[tuple[str, str]] = set()
 
     for batch in batches:
+        authoritative_openapi_targets.update(batch.authoritative_openapi_targets)
+        manual_signals_authoritative |= batch.manual_signals_authoritative
+        consumers_authoritative |= batch.consumers_authoritative
         for signal in batch.signals:
             signal_identity = (signal.target_id, signal.source, signal.signal_key)
             if signal_identity in signal_ids:
@@ -544,6 +560,9 @@ def merge_source_batches(*batches: SourceBatch) -> SourceBatch:
                 ),
             )
         ),
+        authoritative_openapi_targets=tuple(sorted(authoritative_openapi_targets)),
+        manual_signals_authoritative=manual_signals_authoritative,
+        consumers_authoritative=consumers_authoritative,
     )
 
 

@@ -269,6 +269,7 @@ def test_ics_is_rfc5545_folded_stable_and_omits_unknown_dates() -> None:
     assert "\\," in first and "\\;" in first
     assert any(line.startswith(" ") for line in physical_lines)
     assert all(len(line.encode("utf-8")) <= 75 for line in physical_lines)
+    assert all(not line.endswith((" ", "\t")) for line in physical_lines)
 
 
 def test_ics_uses_stable_distinct_uids_and_skips_withdrawn() -> None:

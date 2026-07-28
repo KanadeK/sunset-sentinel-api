@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import httpx
 
@@ -93,6 +93,55 @@ def test_http_scan_strict_mode_rejects_legacy_boolean_without_persisting() -> No
     assert any(
         diagnostic.code == "invalid_deprecation_header" for diagnostic in outcome.diagnostics
     )
+
+
+def test_http_scan_withdraws_prior_signal_when_both_headers_disappear() -> None:
+    responses = iter(
+        (
+            {
+                "Deprecation": "@1782863999",
+                "Sunset": "Wed, 30 Sep 2026 23:59:59 GMT",
+                "Cache-Control": "no-store",
+            },
+            {"Cache-Control": "no-store"},
+        )
+    )
+    transport = httpx.MockTransport(
+        lambda request: httpx.Response(
+            200,
+            headers=next(responses),
+            request=request,
+        )
+    )
+    target = HttpScanTarget(
+        target_id="acme",
+        url="https://api.example.com/v1/orders",
+    )
+    later = NOW + timedelta(hours=1)
+
+    with SQLiteRepository(":memory:", clock=FrozenClock(NOW)) as repository:
+        with _client(transport) as client:
+            discovered = scan_http_target(
+                client=client,
+                repository=repository,
+                target=target,
+                observed_at=NOW,
+            )
+            withdrawn = scan_http_target(
+                client=client,
+                repository=repository,
+                target=target,
+                observed_at=later,
+            )
+        changes = repository.list_changes()
+        active = repository.list_signals(active_only=True)
+
+    assert discovered.persisted is True
+    assert withdrawn.persisted is True
+    assert withdrawn.parsed_signal is not None
+    assert withdrawn.parsed_signal.active is False
+    assert [change.change_type for change in changes] == ["discovered", "withdrawn"]
+    assert active == ()
 
 
 def test_http_scan_blocked_host_never_invokes_transport_or_writes() -> None:
